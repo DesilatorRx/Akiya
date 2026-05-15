@@ -99,10 +99,10 @@ export default function ListingsPage() {
       <p style={{ fontFamily: sans, color: C.muted, marginTop: 0 }}>
         {loading
           ? 'Loading listings…'
-          : `${filtered.length} of ${all.length} properties`}
-        {!loading && source === 'demo' && ' (demo data)'}
-        {!loading && source === 'supabase' && ' (live)'}. Prices in Japanese
-        yen with a USD estimate at ¥155/USD.
+          : source === 'unavailable'
+          ? 'Listings are temporarily unavailable — please try again shortly.'
+          : `${filtered.length} of ${all.length} live listings. Prices in ` +
+            'Japanese yen with a USD estimate at ¥155/USD.'}
       </p>
 
       <div
@@ -289,7 +289,7 @@ export default function ListingsPage() {
         })}
       </div>
 
-      {!loading && filtered.length === 0 && (
+      {!loading && source !== 'unavailable' && filtered.length === 0 && (
         <p style={{ fontFamily: sans, color: C.muted }}>
           No properties match these filters.
         </p>

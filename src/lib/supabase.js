@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Singleton Supabase client. Phase 1 still uses the static LISTINGS array
-// (see src/data/listings.js); this is wired up for the Phase 2 switch to
-// live Postgres + PostGIS queries.
+// Singleton Supabase client. All listing data is served live from here
+// (Postgres + PostGIS); there is no static/demo fallback.
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
