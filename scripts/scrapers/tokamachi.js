@@ -1,14 +1,11 @@
-// Tokamachi City (Niigata) akiya bank scraper.  *** WIP — NOT REGISTERED ***
+// Tokamachi City (Niigata) akiya bank scraper.
 //
-// Status: NOT wired into scripts/scrape.js. The akiya-athome.jp platform
-// renders the photo/blurb cards and the price/area RESULTS TABLE as
-// separate DOM regions; the current per-link window conflates them, so
-// every row gets the first card's price/layout (verified bug). Do not
-// register until parseList() joins table rows to cards by id (the table
-// `<tr>`s carry the real price/間取り/面積 keyed by the same detail id).
-//
-// Source: akiya-athome.jp platform (used by many municipalities — once
-// fixed this is a reusable template for other *-athome.jp banks).
+// akiya-athome.jp platform (used by many municipalities — this parser is
+// a reusable template for other *-athome.jp banks). The list page has two
+// regions keyed by the same detail id:
+//   - photo/blurb CARDS  (property-list-one): image, address, build-age
+//   - results TABLE rows: price, 間取り, 面積 ("建物面積 / 土地面積")
+// parseList() parses both and joins by id. Pure/testable.
 
 import { geocode } from '../lib/geocode.js';
 
@@ -48,64 +45,98 @@ function mapCondition(text) {
   return 'needs-work';
 }
 
+function num(s) {
+  const v = parseFloat(String(s).replace(/,/g, ''));
+  return Number.isFinite(v) ? v : null;
+}
+
 /**
  * Pure parser: full list-page HTML -> array of normalized rows.
+ * Joins the results-table data row (price/layout/area) to the photo card
+ * (image/address/age) by the shared detail id.
  */
 export function parseList(html) {
-  const linkRe =
-    /href="(\/bukken\/detail\/buy\/[^"]*?-(\d+))"/g;
-  const seen = new Set();
-  const rows = [];
-  let m;
+  // 1. Table data rows: a <tr> that contains a detail link AND <td> cells.
+  const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
+  const table = new Map(); // id -> { price, layout, size_m2, land_m2 }
+  let t;
+  while ((t = trRe.exec(html))) {
+    const tr = t[0];
+    const idm = tr.match(/bukken\/detail\/buy\/[^"']*?-(\d+)/);
+    const tds = [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((c) =>
+      detag(c[1])
+    );
+    if (!idm || tds.length < 4) continue; // skip the photo-only <tr>
+    const cellText = tds.join(' ');
+    const price = parseYen(cellText);
+    const layout = (cellText.match(/\b(\d+[SLDKR]{1,4})\b/) || [])[1] || null;
+    const area = cellText.match(
+      /([\d,]+(?:\.\d+)?)\s*㎡\s*\/\s*([\d,]+(?:\.\d+)?)\s*㎡/
+    );
+    if (price <= 0 && !layout) continue;
+    table.set(idm[1], {
+      price,
+      layout,
+      size_m2: area ? num(area[1]) : null, // 建物面積 (building)
+      land_m2: area ? num(area[2]) : null, // 土地面積 (land)
+    });
+  }
 
-  while ((m = linkRe.exec(html))) {
-    const id = m[2];
-    if (seen.has(id)) continue;
-    seen.add(id);
-
-    // Card window: from this link back to the prior card start, forward
-    // to the next link — generous enough to include price/layout text.
-    const at = m.index;
-    const start = html.lastIndexOf('property-list-one', at);
-    const next = html.indexOf('/bukken/detail/buy/', at + m[1].length);
-    const win = html.slice(start >= 0 ? start : at, next > 0 ? next + 200 : at + 2500);
+  // 2. Photo/blurb cards: window forward from each title anchor (all cards
+  // live in one container, so split by the detail anchor, not the class).
+  const cards = new Map(); // id -> { image, addr, year, blurb, cond }
+  const aRe = /href="\/bukken\/detail\/buy\/[^"]*?-(\d+)"[^>]*>/g;
+  let a;
+  while ((a = aRe.exec(html))) {
+    const id = a[1];
+    if (cards.has(id)) continue;
+    const win = html.slice(a.index, a.index + 1800);
     const text = detag(win);
+    // Strip the 【新潟県十日町市】 title bracket, then take the locality
+    // token that follows (e.g. 山本町5丁目 / 上川町 / 尾崎).
+    const after = text.replace(/【[^】]*】/g, ' ');
+    const loc =
+      (after.match(/十日町市\s*([0-9０-９一-龯ぁ-んァ-ヶ丁目番地]+)/) || [])[1] ||
+      '';
+    const addr = `新潟県十日町市${loc}`.trim();
+    const img = (win.match(/\/\/img\.akiya-athome\.jp\/\?v=[^"'\s]+/) || [])[0];
+    const blurb = (text.match(/([^。]{8,140}物件です。)/) || [, ''])[1] || '';
+    cards.set(id, {
+      image: img ? `https:${img}` : null,
+      addr,
+      year: yearFromAge(text),
+      blurb,
+      cond: mapCondition(text),
+    });
+  }
 
-    const price = parseYen(text);
-    const layout = (text.match(/\b(\d+[SLDK]{1,4})\b/) || [])[1] || null;
-    const addr =
-      (text.match(/(新潟県十日町市[^\sＪJ（(]+)/) || [])[1] ||
-      (text.match(/十日町市[^\sＪJ（(]+/) || [])[0] ||
-      '十日町市';
-    const imgRel =
-      (win.match(/\/\/img\.akiya-athome\.jp\/\?v=[^"'\s]+/) || [])[0] || null;
-
-    if (price <= 0 && !layout) continue; // not a real sale card
-
+  // 3. Join. Only ids present in the table are real, priced sale listings.
+  const rows = [];
+  for (const [id, d] of table) {
+    const c = cards.get(id) || {};
     rows.push({
       source: SOURCE,
       source_id: id,
       id: `${SOURCE}:${id}`,
-      title: `Tokamachi akiya ${id}${layout ? ` — ${layout}` : ''}`,
+      title: `Tokamachi akiya ${id}${d.layout ? ` — ${d.layout}` : ''}`,
       prefecture: 'Niigata',
       city: 'Tokamachi',
-      price,
-      is_free: price <= 0,
-      condition: mapCondition(text),
+      price: d.price,
+      is_free: d.price <= 0,
+      condition: c.cond || 'needs-work',
       locality: 'rural',
-      size_m2: null, // only in JS-rendered table
-      land_m2: null,
-      year_built: yearFromAge(text),
-      bedrooms: parseBedrooms(layout),
+      size_m2: d.size_m2,
+      land_m2: d.land_m2,
+      year_built: c.year ?? null,
+      bedrooms: parseBedrooms(d.layout),
       lat: null,
       lng: null,
-      image: imgRel ? `https:${imgRel}` : null,
+      image: c.image || null,
       description:
-        `${addr}. ${layout || ''}. ` +
-        `${(text.match(/([^。]{8,140}物件です。)/) || [, ''])[1] || ''} ` +
-        `Source: ${BASE}${m[1]}`,
-      source_url: `${BASE}${m[1]}`,
-      _addressJa: addr,
+        `${c.addr || '十日町市'}. ${d.layout || ''}. ${c.blurb || ''} `.trim() +
+        ` Source: ${BASE}/bukken/detail/buy/-${id}`,
+      source_url: `${BASE}/bukken/detail/buy/-${id}`,
+      _addressJa: c.addr || '十日町市',
     });
   }
   return rows;

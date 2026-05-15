@@ -15,8 +15,12 @@
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { SOURCE as IIYAMA, scrapeIiyama } from './scrapers/iiyama.js';
+import { SOURCE as TOKAMACHI, scrapeTokamachi } from './scrapers/tokamachi.js';
 
-const SCRAPERS = [{ source: IIYAMA, run: scrapeIiyama }];
+const SCRAPERS = [
+  { source: IIYAMA, run: scrapeIiyama },
+  { source: TOKAMACHI, run: scrapeTokamachi },
+];
 
 const DRY_RUN = process.env.DRY_RUN === '1';
 
