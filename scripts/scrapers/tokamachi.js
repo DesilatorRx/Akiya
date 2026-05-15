@@ -142,11 +142,16 @@ export function parseList(html) {
   return rows;
 }
 
-export async function scrapeTokamachi(browser) {
-  const page = await browser.newPage();
-  await page.goto(LIST, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  const html = await page.content();
-  await page.close();
+// akiya-athome serves the results table in the initial HTML response; its
+// SPA hydration then mutates the DOM, so a headless browser's post-render
+// content() loses the table. Plain fetch() of the server HTML is correct
+// and lighter. (browser arg accepted for a uniform runner signature.)
+export async function scrapeTokamachi(_browser) {
+  const res = await fetch(LIST, {
+    headers: { 'User-Agent': 'akiya-portal/1.0 (+https://akiya-rho.vercel.app)' },
+  });
+  if (!res.ok) throw new Error(`list fetch HTTP ${res.status}`);
+  const html = await res.text();
 
   const rows = parseList(html);
   for (const r of rows) {
