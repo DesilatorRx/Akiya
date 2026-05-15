@@ -8,6 +8,7 @@ import {
   ASSESSED_RATIOS,
 } from '../lib/taxes.js';
 import { CONDITIONS } from '../data/listings.js';
+import { nearestShinkansen, cityPopulation } from '../lib/place.js';
 
 function Stat({ label, value, sub }) {
   return (
@@ -457,17 +458,80 @@ export default function PropertyModal({ listing, onClose }) {
           >
             <Stat
               label="Building"
-              value={`${m2ToSqft(listing.sizeM2).toLocaleString()} sq ft`}
-              sub={`(${listing.sizeM2} m²)`}
+              value={
+                listing.sizeM2
+                  ? `${m2ToSqft(listing.sizeM2).toLocaleString()} sq ft`
+                  : '—'
+              }
+              sub={listing.sizeM2 ? `(${listing.sizeM2} m²)` : 'not stated'}
             />
             <Stat
               label="Land"
-              value={`${m2ToSqft(listing.landM2).toLocaleString()} sq ft`}
-              sub={`(${listing.landM2} m²)`}
+              value={
+                listing.landM2
+                  ? `${m2ToSqft(listing.landM2).toLocaleString()} sq ft`
+                  : '—'
+              }
+              sub={listing.landM2 ? `(${listing.landM2} m²)` : 'not stated'}
             />
-            <Stat label="Bedrooms" value={listing.bedrooms} />
-            <Stat label="Year built" value={listing.yearBuilt} />
+            <Stat label="Bedrooms" value={listing.bedrooms ?? '—'} />
+            <Stat label="Year built" value={listing.yearBuilt ?? '—'} />
           </div>
+
+          {(() => {
+            const pop = cityPopulation(listing.city);
+            const sk = nearestShinkansen(listing.lat, listing.lng);
+            if (!pop && !sk) return null;
+            const skText = sk
+              ? sk.km <= 1.2
+                ? `${sk.name} Shinkansen — walkable, ~${sk.walkMin} min ` +
+                  `(≈${sk.km} km)`
+                : `${sk.name} Shinkansen — ≈${sk.km} km ` +
+                  `(${sk.line} line, straight-line)`
+              : null;
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 16,
+                  flexWrap: 'wrap',
+                  background: C.white,
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 8,
+                  padding: 16,
+                  marginTop: 12,
+                  fontFamily: sans,
+                }}
+              >
+                {pop && (
+                  <Stat
+                    label="Town population"
+                    value={`~${pop.toLocaleString()}`}
+                    sub={`${listing.city} (approx. 2024)`}
+                  />
+                )}
+                {sk && (
+                  <div style={{ flex: '2 1 240px' }}>
+                    <div
+                      style={{ fontSize: 12, color: C.muted, fontFamily: sans }}
+                    >
+                      Nearest Shinkansen
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 700,
+                        fontFamily: sans,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {skText}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <TaxCalculator listing={listing} />
           <Advisor listing={listing} />
