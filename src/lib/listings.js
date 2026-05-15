@@ -57,18 +57,30 @@ export async function getListingById(src, sourceId) {
   }
 }
 
+// PostgREST caps each response (Supabase default 1000 rows). Page through
+// with .range() so the client gets the full set (~1.5k listings).
 export async function getListings() {
   if (!isSupabaseConfigured || !supabase) {
     return { listings: [], source: 'unavailable' };
   }
   try {
-    const { data, error } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('active', true)
-      .order('price', { ascending: true });
-    if (error) throw error;
-    return { listings: (data || []).map(fromRow), source: 'supabase' };
+    const PAGE = 1000;
+    let from = 0;
+    const all = [];
+    for (;;) {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('active', true)
+        .order('price', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const batch = data || [];
+      all.push(...batch);
+      if (batch.length < PAGE) break;
+      from += PAGE;
+    }
+    return { listings: all.map(fromRow), source: 'supabase' };
   } catch (e) {
     console.warn('Supabase listings fetch failed:', e.message);
     return { listings: [], source: 'unavailable' };

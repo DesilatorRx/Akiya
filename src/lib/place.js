@@ -1,5 +1,6 @@
 import { SHINKANSEN } from '../data/shinkansen.js';
 import { CITY_POPULATION } from '../data/population.js';
+import { COASTLINE } from '../data/coastline.js';
 
 function haversineKm(aLat, aLng, bLat, bLng) {
   const R = 6371;
@@ -36,4 +37,19 @@ export function nearestShinkansen(lat, lng) {
 
 export function cityPopulation(city) {
   return CITY_POPULATION[city] ?? null;
+}
+
+/**
+ * Straight-line km from (lat,lng) to the nearest coastline reference
+ * point. Approximate (coarse coastline + city-level coords) — good for
+ * "near the sea" buckets, not exact. null if no coordinates.
+ */
+export function nearestCoastKm(lat, lng) {
+  if (lat == null || lng == null) return null;
+  let best = Infinity;
+  for (const [cLat, cLng] of COASTLINE) {
+    const km = haversineKm(lat, lng, cLat, cLng);
+    if (km < best) best = km;
+  }
+  return best === Infinity ? null : Math.round(best);
 }

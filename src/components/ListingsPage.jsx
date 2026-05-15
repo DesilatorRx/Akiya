@@ -3,7 +3,24 @@ import { C, serif, sans } from '../theme.js';
 import { CONDITIONS } from '../data/listings.js';
 import { getListings, getListingsNear } from '../lib/listings.js';
 import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
+import { nearestCoastKm } from '../lib/place.js';
 import { Link } from 'react-router-dom';
+
+const SQFT = [
+  { id: 'any', label: 'Any size', min: 0, max: Infinity },
+  { id: 's', label: 'Under 800 sq ft', min: 0, max: 800 },
+  { id: 'm', label: '800–1,500 sq ft', min: 800, max: 1500 },
+  { id: 'l', label: '1,500–3,000 sq ft', min: 1500, max: 3000 },
+  { id: 'xl', label: '3,000+ sq ft', min: 3000, max: Infinity },
+];
+// Coarse on purpose: coastline + city-level coords are ±~15 km, so we
+// don't claim false precision like "≤5 km".
+const OCEAN = [
+  { id: 'any', label: 'Any distance to sea', km: Infinity },
+  { id: 'coast', label: 'Coastal (~20 km of sea)', km: 20 },
+  { id: 'near', label: 'Near the sea (~50 km)', km: 50 },
+];
+const PAGE_SIZES = [24, 48, 96];
 
 const PRICE_BANDS = [
   { id: 'any', label: 'Any price', test: () => true },
@@ -43,6 +60,10 @@ export default function ListingsPage() {
   const [prefecture, setPrefecture] = useState('any');
   const [near, setNear] = useState('off');
   const [radiusKm, setRadiusKm] = useState(50);
+  const [sqft, setSqft] = useState('any');
+  const [ocean, setOcean] = useState('any');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(24);
   const [all, setAll] = useState([]);
   const [source, setSource] = useState(null); // 'supabase' | 'demo' | null
   const [loading, setLoading] = useState(true);
@@ -75,13 +96,36 @@ export default function ListingsPage() {
 
   const filtered = useMemo(() => {
     const band = PRICE_BANDS.find((b) => b.id === priceBand);
-    return all.filter(
-      (l) =>
-        band.test(l.price) &&
-        (condition === 'any' || l.condition === condition) &&
-        (prefecture === 'any' || l.prefecture === prefecture)
-    );
-  }, [all, priceBand, condition, prefecture]);
+    const sz = SQFT.find((s) => s.id === sqft);
+    const oc = OCEAN.find((o) => o.id === ocean);
+    return all.filter((l) => {
+      if (!band.test(l.price)) return false;
+      if (condition !== 'any' && l.condition !== condition) return false;
+      if (prefecture !== 'any' && l.prefecture !== prefecture) return false;
+      if (sz.id !== 'any') {
+        if (l.sizeM2 == null) return false; // size unknown -> exclude when filtering
+        const ft = m2ToSqft(l.sizeM2);
+        if (ft < sz.min || ft >= sz.max) return false;
+      }
+      if (oc.id !== 'any') {
+        const km = nearestCoastKm(l.lat, l.lng);
+        if (km == null || km > oc.km) return false;
+      }
+      return true;
+    });
+  }, [all, priceBand, condition, prefecture, sqft, ocean]);
+
+  // Reset to first page whenever the filtered set changes.
+  useEffect(() => {
+    setPage(0);
+  }, [priceBand, condition, prefecture, sqft, ocean, near, radiusKm, pageSize]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const paged = filtered.slice(
+    safePage * pageSize,
+    safePage * pageSize + pageSize
+  );
 
   return (
     <div>
@@ -100,8 +144,9 @@ export default function ListingsPage() {
           ? 'Loading listings…'
           : source === 'unavailable'
           ? 'Listings are temporarily unavailable — please try again shortly.'
-          : `${filtered.length} of ${all.length} live listings. Prices in ` +
-            'Japanese yen with a USD estimate at ¥155/USD.'}
+          : `${filtered.length.toLocaleString()} matches of ` +
+            `${all.length.toLocaleString()} live listings — page ` +
+            `${safePage + 1}/${pageCount}. Prices in ¥ (~USD at ¥155).`}
       </p>
 
       <div
@@ -171,6 +216,28 @@ export default function ListingsPage() {
             ))}
           </select>
         )}
+        <select
+          value={sqft}
+          onChange={(e) => setSqft(e.target.value)}
+          style={selectStyle()}
+        >
+          {SQFT.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={ocean}
+          onChange={(e) => setOcean(e.target.value)}
+          style={selectStyle()}
+        >
+          {OCEAN.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div
@@ -180,7 +247,7 @@ export default function ListingsPage() {
           gap: 20,
         }}
       >
-        {filtered.map((l) => {
+        {paged.map((l) => {
           const cond = CONDITIONS[l.condition];
           return (
             <Link
@@ -302,6 +369,65 @@ export default function ListingsPage() {
         </p>
       )}
 
+      {!loading && filtered.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            margin: '28px 0 8px',
+            fontFamily: sans,
+            fontSize: 14,
+          }}
+        >
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 6,
+              border: `1px solid ${C.line}`,
+              background: safePage === 0 ? C.cream : C.navy,
+              color: safePage === 0 ? C.muted : C.white,
+              cursor: safePage === 0 ? 'default' : 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            ← Prev
+          </button>
+          <span style={{ color: C.muted }}>
+            Page {safePage + 1} of {pageCount}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            disabled={safePage >= pageCount - 1}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 6,
+              border: `1px solid ${C.line}`,
+              background: safePage >= pageCount - 1 ? C.cream : C.navy,
+              color: safePage >= pageCount - 1 ? C.muted : C.white,
+              cursor: safePage >= pageCount - 1 ? 'default' : 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            Next →
+          </button>
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            style={selectStyle()}
+          >
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n} per page
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
