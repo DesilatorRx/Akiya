@@ -39,16 +39,43 @@ export function cityPopulation(city) {
   return CITY_POPULATION[city] ?? null;
 }
 
+// Densify the hand-placed coastline: consecutive points are roughly in
+// order along a shore, so for any pair closer than ~70 km (same coast,
+// not a region jump) we linearly interpolate intermediate points every
+// ~6 km. This cuts nearest-point error to a few km — enough to support
+// tighter "walk to the sea" buckets — without hand-listing 100s of pts.
+const DENSE_COAST = (() => {
+  const out = [];
+  const STEP_KM = 6;
+  const MAX_GAP_KM = 70;
+  for (let i = 0; i < COASTLINE.length; i++) {
+    const [aLat, aLng] = COASTLINE[i];
+    out.push([aLat, aLng]);
+    const next = COASTLINE[i + 1];
+    if (!next) continue;
+    const [bLat, bLng] = next;
+    const gap = haversineKm(aLat, aLng, bLat, bLng);
+    if (gap > MAX_GAP_KM) continue; // region jump — don't bridge land
+    const n = Math.floor(gap / STEP_KM);
+    for (let k = 1; k < n; k++) {
+      const f = k / n;
+      out.push([aLat + (bLat - aLat) * f, aLng + (bLng - aLng) * f]);
+    }
+  }
+  return out;
+})();
+
 /**
- * Straight-line km from (lat,lng) to the nearest coastline reference
- * point. Approximate (coarse coastline + city-level coords) — good for
- * "near the sea" buckets, not exact. null if no coordinates.
+ * Straight-line km from (lat,lng) to the nearest coastline point
+ * (densified). Approximate — it pairs with town-level coordinates, so it
+ * reflects how coastal the *town* is, not the exact house. null if no
+ * coordinates.
  */
 export function nearestCoastKm(lat, lng) {
   if (lat == null || lng == null) return null;
   let best = Infinity;
-  for (const [cLat, cLng] of COASTLINE) {
-    const km = haversineKm(lat, lng, cLat, cLng);
+  for (let i = 0; i < DENSE_COAST.length; i++) {
+    const km = haversineKm(lat, lng, DENSE_COAST[i][0], DENSE_COAST[i][1]);
     if (km < best) best = km;
   }
   return best === Infinity ? null : Math.round(best);

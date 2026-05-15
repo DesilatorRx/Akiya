@@ -13,11 +13,14 @@ const SQFT = [
   { id: 'l', label: '1,500–3,000 sq ft', min: 1500, max: 3000 },
   { id: 'xl', label: '3,000+ sq ft', min: 3000, max: Infinity },
 ];
-// Coarse on purpose: coastline + city-level coords are ±~15 km, so we
-// don't claim false precision like "≤5 km".
+// Distance from the town to the sea (approximate — town-level coords +
+// sampled coastline; the "~" is intentional, it's not house-exact).
 const OCEAN = [
   { id: 'any', label: 'Any distance to sea', km: Infinity },
-  { id: 'coast', label: 'Coastal (~20 km of sea)', km: 20 },
+  { id: 'walk', label: '🌊 Walkable to sea (~2 km)', km: 2 },
+  { id: 'bike', label: 'Very close to sea (~5 km)', km: 5 },
+  { id: 'short', label: 'Short drive to sea (~10 km)', km: 10 },
+  { id: 'coast', label: 'Coastal area (~20 km)', km: 20 },
   { id: 'near', label: 'Near the sea (~50 km)', km: 50 },
 ];
 const PAGE_SIZES = [24, 48, 96];
