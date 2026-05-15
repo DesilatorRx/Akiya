@@ -5,7 +5,7 @@ import { getListings, getListingsNear } from '../lib/listings.js';
 import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
 import { nearestCoastKm } from '../lib/place.js';
 import { displayTitle } from '../lib/format.js';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import SignupBar from './SignupBar.jsx';
 
 const SQFT = [
@@ -68,9 +68,14 @@ function selectStyle() {
 }
 
 export default function ListingsPage() {
+  const [searchParams] = useSearchParams();
   const [priceBand, setPriceBand] = useState('any');
   const [condition, setCondition] = useState('any');
-  const [prefecture, setPrefecture] = useState('any');
+  // Preselect the prefecture filter when arriving via /?prefecture=Niigata
+  // (e.g. from the Data Sources coverage table).
+  const [prefecture, setPrefecture] = useState(
+    () => searchParams.get('prefecture') || 'any'
+  );
   const [near, setNear] = useState('off');
   const [radiusKm, setRadiusKm] = useState(50);
   const [sqft, setSqft] = useState('any');
