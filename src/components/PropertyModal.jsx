@@ -12,10 +12,9 @@ import { nearestShinkansen, cityPopulation } from '../lib/place.js';
 import { displayTitle } from '../lib/format.js';
 import { Link } from 'react-router-dom';
 import { submitLead } from '../lib/leads.js';
+import { AFFILIATES } from '../lib/affiliates.js';
 
-// Swap these for your affiliate/referral URLs once you've joined the
-// programs (Wise affiliate, etc.). Plain links until then.
-const WISE_URL = 'https://wise.com/';
+const WISE_URL = AFFILIATES.wise;
 
 function BuyingHelp({ listing }) {
   const [email, setEmail] = useState('');

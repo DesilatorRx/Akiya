@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { C, serif, sans } from '../theme.js';
 import { PREFECTURES_47, AGENTS } from '../data/prefectures.js';
+import { AFFILIATES } from '../lib/affiliates.js';
 
 const STEPS = [
   {
@@ -327,8 +328,7 @@ export default function GetStartedPage() {
         {[
           {
             name: 'Wise — transfer funds to Japan',
-            // TODO: replace with your Wise affiliate URL once enrolled.
-            url: 'https://wise.com/',
+            url: AFFILIATES.wise,
             lang: 'EN / JP',
             focus:
               'Low-cost international transfers in JPY — typically far ' +
