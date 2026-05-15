@@ -7,7 +7,9 @@
 
 export const config = { runtime: 'edge' };
 
-const MODEL = 'claude-sonnet-4-6';
+// Haiku: ~4x cheaper per token than Sonnet, ample for the advisor Q&A
+// and letter drafting. Bump to Sonnet here if answer quality needs it.
+const MODEL = 'claude-haiku-4-5-20251001';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
 // ---- In-memory rate limiting -------------------------------------------
