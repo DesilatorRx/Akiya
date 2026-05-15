@@ -6,6 +6,7 @@ import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
 import { nearestCoastKm } from '../lib/place.js';
 import { displayTitle } from '../lib/format.js';
 import { Link } from 'react-router-dom';
+import SignupBar from './SignupBar.jsx';
 
 const SQFT = [
   { id: 'any', label: 'Any size', min: 0, max: Infinity },
@@ -166,6 +167,8 @@ export default function ListingsPage() {
             `${all.length.toLocaleString()} live listings — page ` +
             `${safePage + 1}/${pageCount}. Prices in ¥ (~USD at ¥155).`}
       </p>
+
+      <SignupBar prefecture={prefecture} />
 
       <div
         style={{
