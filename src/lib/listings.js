@@ -28,6 +28,7 @@ function fromRow(r) {
     image: r.image,
     description: r.description,
     sourceUrl: r.source_url,
+    population: r.population ?? null,
   };
 }
 

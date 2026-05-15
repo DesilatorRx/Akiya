@@ -15,6 +15,7 @@
 // prefEn, cityEn, locality }.
 
 import { geocode } from '../lib/geocode.js';
+import { getPopulation } from '../lib/population.js';
 
 function detag(s) {
   return s
@@ -158,6 +159,7 @@ export function parseAkiyaAthome(html, cfg) {
       lat: null,
       lng: null,
       image: c.image || null,
+      population: null,
       description: `${c.addr || `${prefEn}, ${cityEn}`}. ${
         d.layout || ''
       }. ${c.blurb || ''}`.trim(),
@@ -188,9 +190,11 @@ export function makeAkiyaAthome(cfg) {
         const key = r._cityKey;
         if (key && !byCity.has(key)) byCity.set(key, null);
       }
+      const pop = new Map();
       for (const key of byCity.keys()) {
         const g = await geocode(key, '');
         if (g) byCity.set(key, g);
+        pop.set(key, await getPopulation(key));
       }
       for (const r of rows) {
         const g = r._cityKey ? byCity.get(r._cityKey) : null;
@@ -198,6 +202,7 @@ export function makeAkiyaAthome(cfg) {
           r.lat = g.lat;
           r.lng = g.lng;
         }
+        if (r._cityKey) r.population = pop.get(r._cityKey) ?? null;
         delete r._cityKey;
       }
       return rows;

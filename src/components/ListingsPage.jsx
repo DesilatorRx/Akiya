@@ -24,6 +24,14 @@ const OCEAN = [
   { id: 'coast', label: 'Coastal area (~20 km)', km: 20 },
   { id: 'near', label: 'Near the sea (~50 km)', km: 50 },
 ];
+const TOWN = [
+  { id: 'any', label: 'Any town size', min: 0, max: Infinity },
+  { id: 'village', label: 'Village (< 10k)', min: 0, max: 10000 },
+  { id: 'smalltown', label: 'Small town (10k–50k)', min: 10000, max: 50000 },
+  { id: 'town', label: 'Town (50k–100k)', min: 50000, max: 100000 },
+  { id: 'city', label: 'City (100k–500k)', min: 100000, max: 500000 },
+  { id: 'bigcity', label: 'Large city (500k+)', min: 500000, max: Infinity },
+];
 const PAGE_SIZES = [24, 48, 96];
 
 const PRICE_BANDS = [
@@ -66,6 +74,7 @@ export default function ListingsPage() {
   const [radiusKm, setRadiusKm] = useState(50);
   const [sqft, setSqft] = useState('any');
   const [ocean, setOcean] = useState('any');
+  const [town, setTown] = useState('any');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(24);
   const [all, setAll] = useState([]);
@@ -102,10 +111,15 @@ export default function ListingsPage() {
     const band = PRICE_BANDS.find((b) => b.id === priceBand);
     const sz = SQFT.find((s) => s.id === sqft);
     const oc = OCEAN.find((o) => o.id === ocean);
+    const tw = TOWN.find((t) => t.id === town);
     return all.filter((l) => {
       if (!band.test(l.price)) return false;
       if (condition !== 'any' && l.condition !== condition) return false;
       if (prefecture !== 'any' && l.prefecture !== prefecture) return false;
+      if (tw.id !== 'any') {
+        if (l.population == null) return false;
+        if (l.population < tw.min || l.population >= tw.max) return false;
+      }
       if (sz.id !== 'any') {
         if (l.sizeM2 == null) return false; // size unknown -> exclude when filtering
         const ft = m2ToSqft(l.sizeM2);
@@ -117,12 +131,12 @@ export default function ListingsPage() {
       }
       return true;
     });
-  }, [all, priceBand, condition, prefecture, sqft, ocean]);
+  }, [all, priceBand, condition, prefecture, sqft, ocean, town]);
 
   // Reset to first page whenever the filtered set changes.
   useEffect(() => {
     setPage(0);
-  }, [priceBand, condition, prefecture, sqft, ocean, near, radiusKm, pageSize]);
+  }, [priceBand, condition, prefecture, sqft, ocean, town, near, radiusKm, pageSize]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount - 1);
@@ -239,6 +253,17 @@ export default function ListingsPage() {
           {OCEAN.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={town}
+          onChange={(e) => setTown(e.target.value)}
+          style={selectStyle()}
+        >
+          {TOWN.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
             </option>
           ))}
         </select>

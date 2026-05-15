@@ -536,7 +536,7 @@ export default function PropertyModal({ listing, onClose, asPage = false }) {
           </div>
 
           {(() => {
-            const pop = cityPopulation(listing.city);
+            const pop = listing.population ?? cityPopulation(listing.city);
             const sk = nearestShinkansen(listing.lat, listing.lng);
             if (!pop && !sk) return null;
             const skText = sk

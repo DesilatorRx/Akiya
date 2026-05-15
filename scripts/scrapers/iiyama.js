@@ -8,6 +8,7 @@
 // Playwright over the live site and delegates parsing to it.
 
 import { geocode } from '../lib/geocode.js';
+import { getPopulation } from '../lib/population.js';
 
 export const SOURCE = 'iiyama-city';
 const BASE = 'https://furusato-iiyama.net';
@@ -106,6 +107,7 @@ export function parseDetail(html, url) {
     bedrooms: parseBedrooms(layout),
     lat: null, // filled by geocoding in scrapeIiyama()
     lng: null,
+    population: null, // filled in scrapeIiyama()
     image: ogImg ? ogImg[1] : null,
     description:
       `${addressJa} — ${layout || ''}. ` +
@@ -154,5 +156,8 @@ export async function scrapeIiyama(browser) {
     }
     delete r._addressJa;
   }
+  // Single municipality — one population lookup for all rows.
+  const iiyamaPop = await getPopulation('長野県飯山市');
+  for (const r of rows) r.population = iiyamaPop;
   return rows;
 }

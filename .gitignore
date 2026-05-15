@@ -6,5 +6,7 @@ dist
 .vercel
 .DS_Store
 *.log
+scripts/.geocache.json
+scripts/.popcache.json
 
 .env*.local
