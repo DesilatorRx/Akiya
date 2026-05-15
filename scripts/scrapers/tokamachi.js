@@ -155,7 +155,8 @@ export async function scrapeTokamachi(_browser) {
 
   const rows = parseList(html);
   for (const r of rows) {
-    const g = await geocode(r._addressJa, '新潟県');
+    // _addressJa already starts with 新潟県 — don't prepend it again.
+    const g = await geocode(r._addressJa, '');
     if (g) {
       r.lat = g.lat;
       r.lng = g.lng;
