@@ -286,20 +286,22 @@ function Advisor({ listing }) {
   );
 }
 
-export default function PropertyModal({ listing, onClose }) {
+// Renders the full property detail. As a modal overlay (browsing) or, with
+// asPage, as a standalone page body (shareable /listing/:source/:id route).
+export default function PropertyModal({ listing, onClose, asPage = false }) {
   useEffect(() => {
-    const onEsc = (e) => e.key === 'Escape' && onClose();
+    if (asPage) return;
+    const onEsc = (e) => e.key === 'Escape' && onClose && onClose();
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
-  }, [onClose]);
+  }, [onClose, asPage]);
 
   if (!listing) return null;
   const cond = CONDITIONS[listing.condition];
 
-  return (
-    <div
-      onClick={onClose}
-      style={{
+  const outerStyle = asPage
+    ? { padding: 0 }
+    : {
         position: 'fixed',
         inset: 0,
         background: 'rgba(13,31,60,0.6)',
@@ -309,7 +311,12 @@ export default function PropertyModal({ listing, onClose }) {
         padding: 24,
         overflowY: 'auto',
         zIndex: 100,
-      }}
+      };
+
+  return (
+    <div
+      onClick={asPage ? undefined : onClose}
+      style={outerStyle}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -318,15 +325,26 @@ export default function PropertyModal({ listing, onClose }) {
           borderRadius: 12,
           maxWidth: 760,
           width: '100%',
+          margin: asPage ? '0 auto' : undefined,
           overflow: 'hidden',
         }}
       >
         <div style={{ position: 'relative' }}>
-          <img
-            src={listing.image}
-            alt={listing.title}
-            style={{ width: '100%', height: 280, objectFit: 'cover' }}
-          />
+          {listing.image ? (
+            <img
+              src={listing.image}
+              alt={listing.title}
+              style={{ width: '100%', height: 280, objectFit: 'cover' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: 160,
+                background: C.navy,
+              }}
+            />
+          )}
           <button
             onClick={onClose}
             style={{
@@ -336,15 +354,18 @@ export default function PropertyModal({ listing, onClose }) {
               background: C.navy,
               color: C.white,
               border: 'none',
-              width: 36,
+              padding: asPage ? '8px 14px' : 0,
+              width: asPage ? 'auto' : 36,
               height: 36,
-              borderRadius: '50%',
+              borderRadius: asPage ? 18 : '50%',
               cursor: 'pointer',
-              fontSize: 18,
+              fontSize: asPage ? 13 : 18,
+              fontFamily: sans,
+              fontWeight: 700,
             }}
-            aria-label="Close"
+            aria-label={asPage ? 'Back to listings' : 'Close'}
           >
-            ×
+            {asPage ? '← Back' : '×'}
           </button>
         </div>
 

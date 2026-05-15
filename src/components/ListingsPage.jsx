@@ -3,7 +3,7 @@ import { C, serif, sans } from '../theme.js';
 import { CONDITIONS } from '../data/listings.js';
 import { getListings, getListingsNear } from '../lib/listings.js';
 import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
-import PropertyModal from './PropertyModal.jsx';
+import { Link } from 'react-router-dom';
 
 const PRICE_BANDS = [
   { id: 'any', label: 'Any price', test: () => true },
@@ -41,7 +41,6 @@ export default function ListingsPage() {
   const [priceBand, setPriceBand] = useState('any');
   const [condition, setCondition] = useState('any');
   const [prefecture, setPrefecture] = useState('any');
-  const [selected, setSelected] = useState(null);
   const [near, setNear] = useState('off');
   const [radiusKm, setRadiusKm] = useState(50);
   const [all, setAll] = useState([]);
@@ -184,11 +183,16 @@ export default function ListingsPage() {
         {filtered.map((l) => {
           const cond = CONDITIONS[l.condition];
           return (
-            <button
+            <Link
               key={l.id}
-              onClick={() => setSelected(l)}
+              to={`/listing/${l.id.split(':')[0]}/${encodeURIComponent(
+                l.id.split(':').slice(1).join(':')
+              )}`}
               style={{
+                display: 'block',
                 textAlign: 'left',
+                textDecoration: 'none',
+                color: 'inherit',
                 background: C.white,
                 border: `1px solid ${C.line}`,
                 borderRadius: 10,
@@ -280,11 +284,14 @@ export default function ListingsPage() {
                     paddingTop: 8,
                   }}
                 >
-                  {m2ToSqft(l.sizeM2).toLocaleString()} sq ft · {l.bedrooms} bd ·
-                  built {l.yearBuilt}
+                  {l.sizeM2
+                    ? `${m2ToSqft(l.sizeM2).toLocaleString()} sq ft`
+                    : 'size n/a'}
+                  {l.bedrooms ? ` · ${l.bedrooms} bd` : ''}
+                  {l.yearBuilt ? ` · built ${l.yearBuilt}` : ''}
                 </div>
               </div>
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -295,12 +302,6 @@ export default function ListingsPage() {
         </p>
       )}
 
-      {selected && (
-        <PropertyModal
-          listing={selected}
-          onClose={() => setSelected(null)}
-        />
-      )}
     </div>
   );
 }

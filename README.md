@@ -40,7 +40,7 @@ vercel dev
 
 ```
 api/chat.js              Vercel Edge Function — Anthropic proxy
-src/App.jsx              Font injection + tab navigation (no router)
+src/App.jsx              Font injection + react-router routes
 src/theme.js             Shared palette + font stacks
 src/lib/supabase.js      Supabase singleton (Phase 2)
 src/lib/taxes.js         calcTax(), yen/usd/sqft formatters

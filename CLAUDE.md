@@ -20,13 +20,19 @@ A property-listing portal for Japanese **akiya** (空き家 — vacant/abandoned
 
 - **No TypeScript.** Plain `.js`/`.jsx` only.
 - **No Tailwind.** All styles are inline style objects; shared palette in `src/theme.js`.
-- **No router.** Single page; tab navigation via `useState` in `App.jsx`.
+- **Routing:** `react-router-dom` (the early "no router" rule was lifted for
+  shareable/indexable listing URLs). Routes: `/`, `/get-started`,
+  `/data-sources`, `/listing/:source/:sourceId`. SPA fallback + per-listing
+  prerender via Vercel rewrites in `vercel.json`.
 - Fonts (Noto Serif JP + DM Sans) injected via runtime `<link>` in `App.jsx`, not committed CSS.
 
 ## Layout
 
 ```
-api/chat.js              Edge Function — Anthropic proxy + in-memory rate limiting
+api/chat.js              Edge Function — Anthropic proxy (Haiku) + rate limiting
+api/prerender.js         Edge — per-listing <title>/OG/JSON-LD for crawlers
+api/sitemap.js           Edge — sitemap.xml from Supabase
+public/robots.txt        points crawlers at the sitemap
 src/App.jsx              Font injection + tab nav
 src/theme.js             Palette (navy #0d1f3c, red #bc2e2e, cream #f5f0e8, gold #e8d5a3) + font stacks
 src/lib/supabase.js      Supabase singleton (no-throw; isSupabaseConfigured guard)

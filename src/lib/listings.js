@@ -31,6 +31,32 @@ function fromRow(r) {
   };
 }
 
+/**
+ * Single listing by source + source_id (its DB id is `${source}:${id}`).
+ * @returns {{ listing, source }} listing is null if not found/unavailable.
+ */
+export async function getListingById(src, sourceId) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { listing: null, source: 'unavailable' };
+  }
+  try {
+    const { data, error } = await supabase
+      .from('listings')
+      .select('*')
+      .eq('id', `${src}:${sourceId}`)
+      .eq('active', true)
+      .maybeSingle();
+    if (error) throw error;
+    return {
+      listing: data ? fromRow(data) : null,
+      source: 'supabase',
+    };
+  } catch (e) {
+    console.warn('Supabase single-listing fetch failed:', e.message);
+    return { listing: null, source: 'unavailable' };
+  }
+}
+
 export async function getListings() {
   if (!isSupabaseConfigured || !supabase) {
     return { listings: [], source: 'unavailable' };

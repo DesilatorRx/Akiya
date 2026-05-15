@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { C, serif, sans } from './theme.js';
 import ListingsPage from './components/ListingsPage.jsx';
 import GetStartedPage from './components/GetStartedPage.jsx';
 import DataSourcesPage from './components/DataSourcesPage.jsx';
+import ListingDetail from './components/ListingDetail.jsx';
 
 const TABS = [
-  { id: 'listings', label: 'Listings' },
-  { id: 'get-started', label: 'Get Started' },
-  { id: 'data-sources', label: 'Data Sources' },
+  { path: '/', label: 'Listings' },
+  { path: '/get-started', label: 'Get Started' },
+  { path: '/data-sources', label: 'Data Sources' },
 ];
 
-// Fonts are injected at runtime via a <link> rather than committed CSS,
-// per project style notes.
+// Fonts are injected at runtime via a <link> rather than committed CSS.
 function useGoogleFonts() {
   useEffect(() => {
     const href =
@@ -32,7 +33,7 @@ function useGoogleFonts() {
 
 export default function App() {
   useGoogleFonts();
-  const [tab, setTab] = useState('listings');
+  const { pathname } = useLocation();
 
   return (
     <div style={{ minHeight: '100vh', background: C.cream }}>
@@ -57,17 +58,18 @@ export default function App() {
             flexWrap: 'wrap',
           }}
         >
-          <div
+          <Link
+            to="/"
             style={{
               display: 'flex',
               alignItems: 'baseline',
               gap: 10,
               padding: '18px 0',
+              textDecoration: 'none',
+              color: C.white,
             }}
           >
-            <span
-              style={{ fontFamily: serif, fontSize: 26, fontWeight: 700 }}
-            >
+            <span style={{ fontFamily: serif, fontSize: 26, fontWeight: 700 }}>
               Akiya<span style={{ color: C.gold }}> Japan</span>
             </span>
             <span
@@ -76,28 +78,30 @@ export default function App() {
             >
               空き家
             </span>
-          </div>
+          </Link>
           <nav style={{ display: 'flex', gap: 4 }}>
             {TABS.map((t) => {
-              const active = t.id === tab;
+              const active =
+                t.path === '/'
+                  ? pathname === '/' || pathname.startsWith('/listing')
+                  : pathname.startsWith(t.path);
               return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                <Link
+                  key={t.path}
+                  to={t.path}
                   style={{
                     background: active ? C.gold : 'transparent',
                     color: active ? C.navy : C.white,
-                    border: 'none',
                     padding: '10px 18px',
                     borderRadius: 6,
                     fontFamily: sans,
                     fontSize: 15,
                     fontWeight: active ? 700 : 500,
-                    cursor: 'pointer',
+                    textDecoration: 'none',
                   }}
                 >
                   {t.label}
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -105,9 +109,16 @@ export default function App() {
       </header>
 
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: 24 }}>
-        {tab === 'listings' && <ListingsPage />}
-        {tab === 'get-started' && <GetStartedPage />}
-        {tab === 'data-sources' && <DataSourcesPage />}
+        <Routes>
+          <Route path="/" element={<ListingsPage />} />
+          <Route path="/get-started" element={<GetStartedPage />} />
+          <Route path="/data-sources" element={<DataSourcesPage />} />
+          <Route
+            path="/listing/:source/:sourceId"
+            element={<ListingDetail />}
+          />
+          <Route path="*" element={<ListingsPage />} />
+        </Routes>
       </main>
 
       <footer
@@ -121,8 +132,9 @@ export default function App() {
           marginTop: 48,
         }}
       >
-        Akiya Japan — a buyer's portal for vacant houses in Japan. Demo data;
-        verify all figures with local akiya banks and agents.
+        Akiya Japan — a buyer's portal for vacant houses in Japan. Listings
+        aggregated from municipal akiya banks; verify all figures with the
+        originating municipality and a licensed professional.
       </footer>
     </div>
   );
