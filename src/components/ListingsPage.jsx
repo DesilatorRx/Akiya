@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { C, serif, sans } from '../theme.js';
 import { CONDITIONS } from '../data/listings.js';
-import { getListings } from '../lib/listings.js';
+import { getListings, getListingsNear } from '../lib/listings.js';
 import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
 import PropertyModal from './PropertyModal.jsx';
 
@@ -12,6 +12,19 @@ const PRICE_BANDS = [
   { id: '3to8', label: '¥3M–¥8M', test: (p) => p >= 3_000_000 && p <= 8_000_000 },
   { id: 'o8', label: 'Over ¥8M', test: (p) => p > 8_000_000 },
 ];
+
+// Anchor points for "near" radius search (city centres).
+const ANCHORS = [
+  { id: 'off', label: 'Anywhere in Japan' },
+  { id: 'tokyo', label: 'Near Tokyo', lat: 35.6762, lng: 139.6503 },
+  { id: 'osaka', label: 'Near Osaka', lat: 34.6937, lng: 135.5023 },
+  { id: 'kyoto', label: 'Near Kyoto', lat: 35.0116, lng: 135.7681 },
+  { id: 'nagano', label: 'Near Nagano', lat: 36.6513, lng: 138.181 },
+  { id: 'niigata', label: 'Near Niigata', lat: 37.9026, lng: 139.0236 },
+  { id: 'sapporo', label: 'Near Sapporo', lat: 43.0618, lng: 141.3545 },
+  { id: 'fukuoka', label: 'Near Fukuoka', lat: 33.5904, lng: 130.4017 },
+];
+const RADII = [25, 50, 100, 200];
 
 function selectStyle() {
   return {
@@ -29,13 +42,21 @@ export default function ListingsPage() {
   const [condition, setCondition] = useState('any');
   const [prefecture, setPrefecture] = useState('any');
   const [selected, setSelected] = useState(null);
+  const [near, setNear] = useState('off');
+  const [radiusKm, setRadiusKm] = useState(50);
   const [all, setAll] = useState([]);
   const [source, setSource] = useState(null); // 'supabase' | 'demo' | null
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
-    getListings().then(({ listings, source }) => {
+    setLoading(true);
+    const anchor = ANCHORS.find((a) => a.id === near);
+    const query =
+      anchor && anchor.id !== 'off'
+        ? getListingsNear(anchor.lat, anchor.lng, radiusKm)
+        : getListings();
+    query.then(({ listings, source }) => {
       if (!alive) return;
       setAll(listings);
       setSource(source);
@@ -44,7 +65,7 @@ export default function ListingsPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [near, radiusKm]);
 
   // Prefecture options come from the live data so the filter matches what's
   // actually loaded (demo or Supabase).
@@ -127,6 +148,30 @@ export default function ListingsPage() {
             </option>
           ))}
         </select>
+        <select
+          value={near}
+          onChange={(e) => setNear(e.target.value)}
+          style={selectStyle()}
+        >
+          {ANCHORS.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label}
+            </option>
+          ))}
+        </select>
+        {near !== 'off' && (
+          <select
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(Number(e.target.value))}
+            style={selectStyle()}
+          >
+            {RADII.map((r) => (
+              <option key={r} value={r}>
+                within {r} km
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div

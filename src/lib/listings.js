@@ -24,6 +24,54 @@ function fromRow(r) {
   };
 }
 
+// Great-circle distance in km (demo-mode fallback for radius search).
+function haversineKm(aLat, aLng, bLat, bLng) {
+  const R = 6371;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLng = ((bLng - aLng) * Math.PI) / 180;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((aLat * Math.PI) / 180) *
+      Math.cos((bLat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/**
+ * Listings within `km` of (lat,lng). Uses the PostGIS RPC
+ * listings_within_km when Supabase is live; otherwise haversine-filters
+ * the demo array. Rows without coordinates are excluded (by design).
+ */
+export async function getListingsNear(lat, lng, km) {
+  if (!isSupabaseConfigured || !supabase) {
+    const near = DEMO.filter(
+      (l) =>
+        l.lat != null &&
+        l.lng != null &&
+        haversineKm(lat, lng, l.lat, l.lng) <= km
+    ).sort((a, b) => a.price - b.price);
+    return { listings: near, source: 'demo' };
+  }
+  try {
+    const { data, error } = await supabase.rpc('listings_within_km', {
+      center_lat: lat,
+      center_lng: lng,
+      radius_km: km,
+    });
+    if (error) throw error;
+    return { listings: (data || []).map(fromRow), source: 'supabase' };
+  } catch (e) {
+    console.warn('Supabase radius query failed, using demo data:', e.message);
+    const near = DEMO.filter(
+      (l) =>
+        l.lat != null &&
+        l.lng != null &&
+        haversineKm(lat, lng, l.lat, l.lng) <= km
+    ).sort((a, b) => a.price - b.price);
+    return { listings: near, source: 'demo' };
+  }
+}
+
 /**
  * Returns { listings, source } where source is 'supabase' | 'demo'.
  * Falls back to the bundled demo array if Supabase isn't configured,

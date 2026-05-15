@@ -7,6 +7,8 @@
 // so it can be unit-tested without a browser; scrapeIiyama() drives
 // Playwright over the live site and delegates parsing to it.
 
+import { geocode } from '../lib/geocode.js';
+
 export const SOURCE = 'iiyama-city';
 const BASE = 'https://furusato-iiyama.net';
 const INDEX = `${BASE}/akiyabank/usedhouse/`;
@@ -80,6 +82,12 @@ export function parseDetail(html, url) {
   const layout = field(text, '間取り');
   const repair = field(text, '補修の要否');
   const usage = field(text, '利用状況');
+  const addressJa = field(text, '所在地') || '';
+
+  // og:image is the property's eye-catch photo (falls back to none).
+  const ogImg = html.match(
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+  );
 
   return {
     source: SOURCE,
@@ -94,16 +102,17 @@ export function parseDetail(html, url) {
     locality: 'rural', // Iiyama is rural snow country
     size_m2: parseArea(field(text, '建物面積')),
     land_m2: parseArea(field(text, '土地面積')),
-    year_built: null, // not published on these pages; geocode/year TODO
+    year_built: null, // not published on these pages
     bedrooms: parseBedrooms(layout),
-    lat: null,
+    lat: null, // filled by geocoding in scrapeIiyama()
     lng: null,
-    image: null,
+    image: ogImg ? ogImg[1] : null,
     description:
-      `${field(text, '所在地') || ''} — ${layout || ''}. ` +
+      `${addressJa} — ${layout || ''}. ` +
       `利用状況: ${usage || 'n/a'}. 補修: ${repair || 'n/a'}. ` +
       `Source: ${url}`,
     source_url: url,
+    _addressJa: addressJa, // consumed by geocoding, stripped before upsert
   };
 }
 
@@ -135,5 +144,15 @@ export async function scrapeIiyama(browser) {
     }
   }
   await page.close();
+
+  // Geocode sequentially (Nominatim 1 req/sec; cached across runs).
+  for (const r of rows) {
+    const g = await geocode(r._addressJa, '長野県');
+    if (g) {
+      r.lat = g.lat;
+      r.lng = g.lng;
+    }
+    delete r._addressJa;
+  }
   return rows;
 }
