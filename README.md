@@ -58,12 +58,42 @@ scripts/scrape.js        Phase 2 nightly scraper (placeholder)
    all 47 prefecture akiya-bank links, bilingual agent directory
 4. **Data Sources** — aggregation architecture, code examples, coverage table
 
-## Phase 2 (not started)
+## Phase 2
 
-- Replace static `LISTINGS` with live Supabase queries
-- Playwright scrapers for top prefecture akiya banks
-- GitHub Actions cron for nightly scraping
-- PostGIS radius search
+Done:
+
+- ✅ Listings served from Supabase (`src/lib/listings.js`), demo-array fallback
+- ✅ Schema + PostGIS + RLS migrations (`supabase/migrations/`)
+- ✅ Rate limiting + input caps on `/api/chat`
+- ✅ First Playwright scraper (Iiyama City) + nightly GitHub Actions cron
+
+Remaining:
+
+- More municipal bank scrapers (one module per `scripts/scrapers/`)
+- Geocoding (scraped rows currently have null lat/lng → excluded from radius search)
+- PostGIS radius-search UI ("within X km")
+
+### Scraper
+
+```bash
+# Scrape only, print normalized rows, no DB writes — safe to run anytime:
+DRY_RUN=1 npm run scrape
+
+# Full run (needs Chromium + Supabase service_role key):
+npx playwright install chromium
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run scrape
+```
+
+Each scraper lives in `scripts/scrapers/<bank>.js` and exports a pure
+`parseDetail(html, url)` (unit-testable without a browser) plus a
+Playwright-driven `scrape<Bank>(browser)`. The runner (`scripts/scrape.js`)
+upserts on `(source, source_id)` and flags rows not seen this run
+`active=false` (never deletes — preserves history).
+
+**GitHub Actions:** `.github/workflows/scrape.yml` runs nightly (03:00 JST).
+Add repo secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+(Settings → Secrets and variables → Actions). The `service_role` key
+bypasses RLS for writes — **repo secret only, never client-side.**
 
 ## Disclaimers
 

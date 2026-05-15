@@ -1,0 +1,44 @@
+name: Nightly akiya scrape
+
+# Runs nightly and on manual dispatch. Scrapes registered municipal akiya
+# banks and upserts into Supabase. Requires two repo secrets:
+#   SUPABASE_URL                project URL
+#   SUPABASE_SERVICE_ROLE_KEY   service_role key (Settings > Secrets > Actions)
+
+on:
+  schedule:
+    - cron: '0 18 * * *' # 18:00 UTC = 03:00 JST daily
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Scrape only, no DB writes'
+        type: boolean
+        default: false
+
+concurrency:
+  group: scrape
+  cancel-in-progress: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: npm run scrape
