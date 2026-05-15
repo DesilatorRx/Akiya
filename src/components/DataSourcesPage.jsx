@@ -1,29 +1,16 @@
 import { C, serif, sans } from '../theme.js';
 
 const COVERAGE = [
-  ['Nagano', 'Iiyama, Saku, Ueda banks', 'Phase 2', 'High akiya density'],
-  ['Niigata', 'Tokamachi, Joetsu banks', 'Phase 2', 'Snow country'],
-  ['Kochi', 'Prefectural iju portal', 'Phase 2', 'Pro-migration'],
-  ['Ehime', 'Yawatahama, Uchiko banks', 'Planned', 'Citrus region'],
-  ['Tokushima', 'Miyoshi / Iya Valley', 'Planned', 'Famous akiya area'],
-  ['Gifu', 'Gujo, Takayama banks', 'Planned', 'Historic towns'],
-  ['Wakayama', 'Tanabe, Kumano banks', 'Planned', 'Kumano Kodo'],
-  ['Oita', 'Beppu, Bungo-ono banks', 'Backlog', 'Onsen demand'],
-  ['Kagoshima', 'Tarumizu, Kirishima', 'Backlog', 'Mild climate'],
-  ['Hokkaido', 'Kutchan, Niseko area', 'Backlog', 'Ski rental'],
+  ['Niigata', 'Sado, Sanjō, Tōkamachi, Nagaoka, Niigata +', 'Live', 'Snow country'],
+  ['Ehime', 'Seiyō, Saijō, Imabari, Yawatahama, Iyo +', 'Live', 'Setouchi coast'],
+  ['Akita', 'Ōdate, Noshiro, Daisen, Yokote +', 'Live', 'Northern Tōhoku'],
+  ['Gifu', 'Nakatsugawa, Takayama, Hida, Seki +', 'Live', 'Historic towns'],
+  ['Ōita', 'Ōita, Usuki, Hita, Yufu +', 'Live', 'Onsen region'],
+  ['Kumamoto', 'Uki, Yatsushiro, Arao, Uto +', 'Live', 'Kyūshū west'],
+  ['Kagoshima', 'Shibushi, Makurazaki, Ichikikushikino +', 'Live', 'Mild climate'],
+  ['Nagano', 'Iiyama, Nakano', 'Live', 'High akiya density'],
+  ['Others', 'Kyoto, Osaka, Shimane, Kōchi, Wakayama, Miyagi…', 'Live', 'Expanding'],
 ];
-
-const codeBox = {
-  background: C.navy,
-  color: '#e8e8e8',
-  borderRadius: 8,
-  padding: 16,
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  fontSize: 13,
-  lineHeight: 1.6,
-  overflowX: 'auto',
-  whiteSpace: 'pre',
-};
 
 export default function DataSourcesPage() {
   return (
@@ -32,9 +19,10 @@ export default function DataSourcesPage() {
         Where the data comes from
       </h1>
       <p style={{ fontFamily: sans, color: C.muted, marginTop: 0, maxWidth: 720 }}>
-        Phase 1 ships with curated demo listings. Phase 2 replaces them with a
-        nightly aggregation pipeline that normalises hundreds of independent
-        municipal akiya banks into one searchable, geo-indexed database.
+        Every listing is aggregated nightly from official municipal akiya
+        banks across Japan and normalised into one searchable, map-indexed
+        database. We don't sell property — each listing links straight back
+        to the originating town's own akiya bank, where you transact.
       </p>
 
       <h2 style={{ fontFamily: serif, color: C.navy, marginTop: 32 }}>
@@ -78,55 +66,7 @@ export default function DataSourcesPage() {
       </div>
 
       <h2 style={{ fontFamily: serif, color: C.navy, marginTop: 32 }}>
-        Example: scraper → normalised row
-      </h2>
-      <div style={codeBox}>
-{`// scripts/scrape.js (Phase 2 sketch)
-import { chromium } from 'playwright';
-
-export async function scrapeIiyama() {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto('https://www.city.iiyama.lg.jp/akiya/');
-
-  const rows = await page.$$eval('.akiya-item', (els) =>
-    els.map((el) => ({
-      sourceId: el.dataset.id,
-      title:   el.querySelector('.title')?.textContent?.trim(),
-      priceYen: Number(
-        el.querySelector('.price')?.textContent?.replace(/[^0-9]/g, '')
-      ),
-      address: el.querySelector('.addr')?.textContent?.trim(),
-    }))
-  );
-
-  await browser.close();
-  return rows.map((r) => ({
-    source: 'iiyama-city',
-    source_id: r.sourceId,
-    title: r.title,
-    price: r.priceYen || 0,
-    is_free: !r.priceYen,
-    raw_address: r.address,
-  }));
-}`}
-      </div>
-
-      <h2 style={{ fontFamily: serif, color: C.navy, marginTop: 32 }}>
-        Example: PostGIS radius query
-      </h2>
-      <div style={codeBox}>
-{`-- listings within 25 km of a point, cheapest first
-select id, title, price,
-       st_distance(geo, st_point(:lng, :lat)::geography) as meters
-from   listings
-where  active
-  and  st_dwithin(geo, st_point(:lng, :lat)::geography, 25000)
-order  by price asc, meters asc;`}
-      </div>
-
-      <h2 style={{ fontFamily: serif, color: C.navy, marginTop: 32 }}>
-        Coverage roadmap
+        Coverage
       </h2>
       <div
         style={{
