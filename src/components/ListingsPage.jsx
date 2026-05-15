@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { C, serif, sans } from '../theme.js';
-import { LISTINGS, CONDITIONS, PREFECTURES } from '../data/listings.js';
+import { CONDITIONS } from '../data/listings.js';
+import { getListings } from '../lib/listings.js';
 import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
 import PropertyModal from './PropertyModal.jsx';
 
@@ -28,16 +29,39 @@ export default function ListingsPage() {
   const [condition, setCondition] = useState('any');
   const [prefecture, setPrefecture] = useState('any');
   const [selected, setSelected] = useState(null);
+  const [all, setAll] = useState([]);
+  const [source, setSource] = useState(null); // 'supabase' | 'demo' | null
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    getListings().then(({ listings, source }) => {
+      if (!alive) return;
+      setAll(listings);
+      setSource(source);
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Prefecture options come from the live data so the filter matches what's
+  // actually loaded (demo or Supabase).
+  const prefectures = useMemo(
+    () => [...new Set(all.map((l) => l.prefecture))].sort(),
+    [all]
+  );
 
   const filtered = useMemo(() => {
     const band = PRICE_BANDS.find((b) => b.id === priceBand);
-    return LISTINGS.filter(
+    return all.filter(
       (l) =>
         band.test(l.price) &&
         (condition === 'any' || l.condition === condition) &&
         (prefecture === 'any' || l.prefecture === prefecture)
     );
-  }, [priceBand, condition, prefecture]);
+  }, [all, priceBand, condition, prefecture]);
 
   return (
     <div>
@@ -52,8 +76,12 @@ export default function ListingsPage() {
         Vacant houses across Japan
       </h1>
       <p style={{ fontFamily: sans, color: C.muted, marginTop: 0 }}>
-        {filtered.length} of {LISTINGS.length} demo properties. Prices in
-        Japanese yen with a USD estimate at ¥155/USD.
+        {loading
+          ? 'Loading listings…'
+          : `${filtered.length} of ${all.length} properties`}
+        {!loading && source === 'demo' && ' (demo data)'}
+        {!loading && source === 'supabase' && ' (live)'}. Prices in Japanese
+        yen with a USD estimate at ¥155/USD.
       </p>
 
       <div
@@ -93,7 +121,7 @@ export default function ListingsPage() {
           style={selectStyle()}
         >
           <option value="any">Any prefecture</option>
-          {PREFECTURES.map((p) => (
+          {prefectures.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
@@ -216,7 +244,7 @@ export default function ListingsPage() {
         })}
       </div>
 
-      {filtered.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <p style={{ fontFamily: sans, color: C.muted }}>
           No properties match these filters.
         </p>
