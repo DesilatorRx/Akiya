@@ -4,6 +4,7 @@ import { CONDITIONS } from '../data/listings.js';
 import { getListings, getListingsNear } from '../lib/listings.js';
 import { formatYen, formatUsd, m2ToSqft } from '../lib/taxes.js';
 import { nearestCoastKm } from '../lib/place.js';
+import { displayTitle } from '../lib/format.js';
 import { Link } from 'react-router-dom';
 
 const SQFT = [
@@ -319,7 +320,7 @@ export default function ListingsPage() {
                     fontSize: 18,
                   }}
                 >
-                  {l.title}
+                  {displayTitle(l)}
                 </h3>
                 <div style={{ color: C.muted, fontSize: 13 }}>
                   {l.city}, {l.prefecture}

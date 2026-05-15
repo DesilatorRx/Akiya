@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { C, serif, sans } from '../theme.js';
 import { getListingById } from '../lib/listings.js';
 import { formatYen } from '../lib/taxes.js';
+import { displayTitle } from '../lib/format.js';
 import PropertyModal from './PropertyModal.jsx';
 
 // Client-side <title>/meta as a fallback. Crawlers get correct tags from
@@ -12,14 +13,15 @@ function useDocumentMeta(listing) {
   useEffect(() => {
     if (!listing) return;
     const prevTitle = document.title;
-    document.title = `${listing.title} — ${formatYen(listing.price)} | Akiya Japan`;
+    const dt = displayTitle(listing);
+    document.title = `${dt} — ${formatYen(listing.price)} | Akiya Japan`;
     const m = document.querySelector('meta[name="description"]');
     const prevDesc = m ? m.getAttribute('content') : null;
     if (m) {
       m.setAttribute(
         'content',
-        `${listing.title} in ${listing.city}, ${listing.prefecture}. ` +
-          `${formatYen(listing.price)}. ${(listing.description || '').slice(0, 140)}`
+        `${dt}. ${formatYen(listing.price)}. ` +
+          `${(listing.description || '').slice(0, 150)}`
       );
     }
     return () => {

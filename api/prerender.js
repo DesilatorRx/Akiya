@@ -16,6 +16,24 @@ const esc = (s) =>
 const fmtYen = (y) =>
   !y || y <= 0 ? 'Free' : '¥' + Number(y).toLocaleString('ja-JP');
 
+// Mirror of src/lib/format.js displayTitle (snake_case DB row) so the
+// crawler title matches what users see.
+const COND_WORD = {
+  'move-in': 'Move-in-ready',
+  'needs-work': 'Project',
+  'tear-down': 'Land / tear-down',
+};
+function displayTitle(r) {
+  const lm = /—\s*([0-9]+[SLDKR]{1,4})\s*$/.exec(r.title || '');
+  const size = lm
+    ? `${lm[1]} home`
+    : r.bedrooms
+    ? `${r.bedrooms}-bed home`
+    : 'Akiya home';
+  const cond = r.is_free ? 'Free' : COND_WORD[r.condition] || '';
+  return `${cond ? cond + ' ' : ''}${size} — ${r.city}, ${r.prefecture}`;
+}
+
 export default async function handler(req) {
   const url = new URL(req.url);
   const source = url.searchParams.get('source');
@@ -58,10 +76,10 @@ export default async function handler(req) {
       `<meta name="robots" content="noindex">` +
       `<link rel="canonical" href="${canonical}">`;
   } else {
-    const title = `${listing.title} — ${fmtYen(listing.price)} | Akiya Japan`;
+    const dt = displayTitle(listing);
+    const title = `${dt} — ${fmtYen(listing.price)} | Akiya Japan`;
     const desc =
-      `${listing.title} in ${listing.city}, ${listing.prefecture}. ` +
-      `${fmtYen(listing.price)}` +
+      `${dt}. ${fmtYen(listing.price)}` +
       (listing.size_m2 ? `, building ${listing.size_m2} m²` : '') +
       `. ${String(listing.description || '').slice(0, 150)}`;
     const img = listing.image || `${origin}/og-default.png`;
@@ -69,7 +87,7 @@ export default async function handler(req) {
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      name: listing.title,
+      name: dt,
       image: listing.image ? [listing.image] : [],
       description: String(listing.description || '').slice(0, 300),
       category: 'Real estate — Japanese akiya',

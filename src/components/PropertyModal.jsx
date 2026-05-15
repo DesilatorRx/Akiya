@@ -9,6 +9,7 @@ import {
 } from '../lib/taxes.js';
 import { CONDITIONS } from '../data/listings.js';
 import { nearestShinkansen, cityPopulation } from '../lib/place.js';
+import { displayTitle } from '../lib/format.js';
 
 // Best Google Maps target: the Japanese street address from the
 // description (Google geocodes it precisely) > the city-level
@@ -407,7 +408,7 @@ export default function PropertyModal({ listing, onClose, asPage = false }) {
                   fontSize: 24,
                 }}
               >
-                {listing.title}
+                {displayTitle(listing)}
               </h2>
               <div style={{ color: C.muted, fontFamily: sans, marginTop: 4 }}>
                 {listing.city}, {listing.prefecture}
