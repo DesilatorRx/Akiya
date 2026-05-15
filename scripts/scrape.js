@@ -15,11 +15,42 @@
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { SOURCE as IIYAMA, scrapeIiyama } from './scrapers/iiyama.js';
-import { SOURCE as TOKAMACHI, scrapeTokamachi } from './scrapers/tokamachi.js';
+import { makeAkiyaAthome } from './scrapers/akiyaAthome.js';
+
+// Every akiya-athome municipality is just config — add a row to onboard one.
+const ATHOME = [
+  {
+    source: 'tokamachi-city',
+    base: 'https://tokamachi-c15210.akiya-athome.jp',
+    cityJa: '十日町市',
+    prefJa: '新潟県',
+    prefEn: 'Niigata',
+    cityEn: 'Tokamachi',
+    locality: 'rural',
+  },
+  {
+    source: 'kyoto-city',
+    base: 'https://kyoto-c26100.akiya-athome.jp',
+    cityJa: '京都市',
+    prefJa: '京都府',
+    prefEn: 'Kyoto',
+    cityEn: 'Kyoto',
+    locality: 'urban',
+  },
+  {
+    source: 'takaishi-city',
+    base: 'https://takaishi-c27225.akiya-athome.jp',
+    cityJa: '高石市',
+    prefJa: '大阪府',
+    prefEn: 'Osaka',
+    cityEn: 'Takaishi',
+    locality: 'urban',
+  },
+].map(makeAkiyaAthome);
 
 const SCRAPERS = [
   { source: IIYAMA, run: scrapeIiyama },
-  { source: TOKAMACHI, run: scrapeTokamachi },
+  ...ATHOME.map((x) => ({ source: x.SOURCE, run: () => x.scrape() })),
 ];
 
 const DRY_RUN = process.env.DRY_RUN === '1';
@@ -69,8 +100,9 @@ async function main() {
       continue;
     }
 
-    // Strip helper-only fields the table doesn't have.
-    const payload = rows.map(({ source_url, ...r }) => r);
+    // rows carry exactly the table columns (source_url is now one of them;
+    // scrapers already delete the _addressJa geocoding helper).
+    const payload = rows;
 
     const { error } = await db
       .from('listings')

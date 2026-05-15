@@ -413,8 +413,36 @@ export default function PropertyModal({ listing, onClose }) {
               marginTop: 16,
             }}
           >
-            {listing.description}
+            {/* Trailing "Source: <url>" is now a real link below. */}
+            {(listing.description || '').replace(
+              /\s*Source:\s*https?:\/\/\S+\s*$/i,
+              ''
+            )}
           </p>
+
+          {(() => {
+            const url =
+              listing.sourceUrl ||
+              ((listing.description || '').match(/https?:\/\/\S+/) || [])[0];
+            return url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-block',
+                  marginBottom: 16,
+                  fontFamily: sans,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: C.red,
+                  textDecoration: 'none',
+                }}
+              >
+                View the original listing on the akiya bank ↗
+              </a>
+            ) : null;
+          })()}
 
           <div
             style={{

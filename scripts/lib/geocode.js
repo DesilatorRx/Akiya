@@ -7,8 +7,11 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const CACHE_FILE = new URL('../.geocache.json', import.meta.url).pathname;
+// .pathname on a Windows file URL is "/C:/..." which fs can't open;
+// fileURLToPath yields a correct native path on every platform.
+const CACHE_FILE = fileURLToPath(new URL('../.geocache.json', import.meta.url));
 const ENDPOINT = 'https://nominatim.openstreetmap.org/search';
 const UA = 'akiya-portal/1.0 (+https://akiya-rho.vercel.app)';
 

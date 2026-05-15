@@ -27,6 +27,7 @@ function fromRow(r) {
     lng: r.lng,
     image: r.image,
     description: r.description,
+    sourceUrl: r.source_url,
   };
 }
 
