@@ -1,14 +1,18 @@
 // Reusable scraper for any municipal bank on the akiya-athome.jp platform.
-//
 // Every *-cNNNNN.akiya-athome.jp site shares one structure:
 //   - /buy/house/list serves all sale houses in the initial HTML (the SPA
 //     then mutates the DOM, so plain fetch() — not Playwright — is right)
-//   - photo/blurb CARDS (one container, cards delimited by title anchors)
+//   - photo/blurb CARDS delimited by title anchors
 //   - a results TABLE whose <tr> carry price / 間取り / 面積 ("建物 / 土地")
 // Both regions key off the same /bukken/detail/buy/...-<id>.
 //
-// makeAkiyaAthome(cfg) returns { SOURCE, scrape } for one municipality.
-// cfg: { source, base, cityJa, prefJa, prefEn, cityEn, locality }
+// Address is extracted generically from the card (prefecture-kanji
+// anchored), so NO per-city config is needed. Geocoding is done once per
+// municipality (city-level), not per listing — accurate enough for radius
+// search and respects Nominatim's bulk policy at scale.
+//
+// makeAkiyaAthome(cfg) -> { SOURCE, scrape }. cfg: { source, base,
+// prefEn, cityEn, locality }.
 
 import { geocode } from '../lib/geocode.js';
 
@@ -48,12 +52,41 @@ function num(s) {
   return Number.isFinite(v) ? v : null;
 }
 
-/**
- * Pure parser. cfg supplies the municipality so address extraction and
- * labels are not hardcoded to one city.
- */
+// Match the exact 47 prefectures (not "any kanji + 県", which false-matches
+// e.g. 小佐渡県立自然公園). cityKey = prefecture + city, for geocoding.
+const JP_PREFS = [
+  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+  '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+  '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+  '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+  '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
+];
+const PREF_ALT = JP_PREFS.join('|');
+// prefecture + everything up to (and including) the first 市/区/町/村,
+// optionally a little more, stopping at rail/walk/paren noise.
+const ADDR_RE = new RegExp(
+  `(${PREF_ALT})([一-龥ァ-ヶぁ-ん々ー0-9０-９丁目番地\\- ]{1,30}?[市区町村]` +
+    `[一-龥ァ-ヶぁ-ん々ー0-9０-９丁目番地\\-]{0,18})`
+);
+// Prefer a 市/区 ending (避け: the 町 inside names like 十日町市); fall
+// back to 町/村 for town/village municipalities.
+const CITY_SHI = new RegExp(`^(${PREF_ALT})(.+?[市区])`);
+const CITY_CHO = new RegExp(`^(${PREF_ALT})(.+?[町村])`);
+
+function extractAddress(text) {
+  const stripped = text.replace(/【[^】]*】/g, ' ');
+  const m = stripped.match(ADDR_RE);
+  if (!m) return { full: null, cityKey: null };
+  const full = `${m[1]}${m[2]}`.replace(/\s+/g, '').trim();
+  const c = full.match(CITY_SHI) || full.match(CITY_CHO);
+  return { full, cityKey: c ? `${c[1]}${c[2]}` : `${m[1]}` };
+}
+
+/** Pure parser. cfg: { source, base, prefEn, cityEn, locality }. */
 export function parseAkiyaAthome(html, cfg) {
-  const { source, base, cityJa, prefJa, prefEn, cityEn, locality } = cfg;
+  const { source, base, prefEn, cityEn, locality } = cfg;
 
   // 1. Table data rows -> price / layout / area, keyed by detail id.
   const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
@@ -84,22 +117,19 @@ export function parseAkiyaAthome(html, cfg) {
   // 2. Card windows (delimited by the title anchor) -> image/address/age.
   const cards = new Map();
   const aRe = /href="\/bukken\/detail\/buy\/[^"]*?-(\d+)"[^>]*>/g;
-  const localityRe = new RegExp(
-    cityJa + '\\s*([0-9０-９一-龯ぁ-んァ-ヶ丁目番地]+)'
-  );
   let a;
   while ((a = aRe.exec(html))) {
     const id = a[1];
     if (cards.has(id)) continue;
     const win = html.slice(a.index, a.index + 1800);
     const text = detag(win);
-    const after = text.replace(/【[^】]*】/g, ' '); // drop title bracket
-    const loc = (after.match(localityRe) || [])[1] || '';
+    const { full, cityKey } = extractAddress(text);
     const img = (win.match(/\/\/img\.akiya-athome\.jp\/\?v=[^"'\s]+/) || [])[0];
     const blurb = (text.match(/([^。]{8,140}物件です。)/) || [, ''])[1] || '';
     cards.set(id, {
       image: img ? `https:${img}` : null,
-      addr: `${prefJa}${cityJa}${loc}`,
+      addr: full,
+      cityKey,
       year: yearFromAge(text),
       blurb,
       cond: mapCondition(text),
@@ -110,7 +140,6 @@ export function parseAkiyaAthome(html, cfg) {
   const rows = [];
   for (const [id, d] of table) {
     const c = cards.get(id) || {};
-    const url = `${base}/bukken/detail/buy/-${id}`;
     rows.push({
       source,
       source_id: id,
@@ -129,11 +158,11 @@ export function parseAkiyaAthome(html, cfg) {
       lat: null,
       lng: null,
       image: c.image || null,
-      description: `${c.addr || `${prefJa}${cityJa}`}. ${
+      description: `${c.addr || `${prefEn}, ${cityEn}`}. ${
         d.layout || ''
       }. ${c.blurb || ''}`.trim(),
-      source_url: url,
-      _addressJa: c.addr || `${prefJa}${cityJa}`,
+      source_url: `${base}/bukken/detail/buy/-${id}`,
+      _cityKey: c.cityKey || null,
     });
   }
   return rows;
@@ -151,14 +180,25 @@ export function makeAkiyaAthome(cfg) {
       });
       if (!res.ok) throw new Error(`${cfg.source} list HTTP ${res.status}`);
       const rows = parseAkiyaAthome(await res.text(), cfg);
+
+      // Geocode ONCE per municipality (city-level), then apply to all of
+      // its rows. ~1 Nominatim call per bank instead of per listing.
+      const byCity = new Map();
       for (const r of rows) {
-        // _addressJa already starts with prefJa — no extra prefix.
-        const g = await geocode(r._addressJa, '');
+        const key = r._cityKey;
+        if (key && !byCity.has(key)) byCity.set(key, null);
+      }
+      for (const key of byCity.keys()) {
+        const g = await geocode(key, '');
+        if (g) byCity.set(key, g);
+      }
+      for (const r of rows) {
+        const g = r._cityKey ? byCity.get(r._cityKey) : null;
         if (g) {
           r.lat = g.lat;
           r.lng = g.lng;
         }
-        delete r._addressJa;
+        delete r._cityKey;
       }
       return rows;
     },
