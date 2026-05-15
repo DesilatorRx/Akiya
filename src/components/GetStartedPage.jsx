@@ -300,6 +300,84 @@ export default function GetStartedPage() {
       <LetterGenerator />
 
       <h2 style={{ fontFamily: serif, color: C.navy, marginTop: 40 }}>
+        Sending money & services
+      </h2>
+      <p
+        style={{
+          fontFamily: sans,
+          color: C.muted,
+          fontSize: 14,
+          marginTop: 0,
+          maxWidth: 720,
+        }}
+      >
+        Most overseas akiya purchases are paid in cash, so moving funds to
+        Japan affordably matters. These are the services foreign buyers use
+        — verify terms yourself; we may earn a referral fee at no cost to
+        you.
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 14,
+          marginBottom: 8,
+        }}
+      >
+        {[
+          {
+            name: 'Wise — transfer funds to Japan',
+            // TODO: replace with your Wise affiliate URL once enrolled.
+            url: 'https://wise.com/',
+            lang: 'EN / JP',
+            focus:
+              'Low-cost international transfers in JPY — typically far ' +
+              'cheaper than a bank wire for a property payment.',
+          },
+          {
+            name: 'Property inspection (home inspector / 住宅診断)',
+            url: 'https://www.jshi.org/',
+            lang: 'JP',
+            focus:
+              'Independent structural / termite inspection before you ' +
+              'commit — essential for older akiya.',
+          },
+          {
+            name: 'Judicial scrivener (司法書士)',
+            url: 'https://www.shiho-shoshi.or.jp/',
+            lang: 'JP',
+            focus:
+              'Handles the title-transfer registration. Find one via the ' +
+              'national association directory.',
+          },
+        ].map((s) => (
+          <a
+            key={s.name}
+            href={s.url}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              background: C.white,
+              border: `1px solid ${C.line}`,
+              borderRadius: 10,
+              padding: 16,
+              textDecoration: 'none',
+              color: C.ink,
+              fontFamily: sans,
+            }}
+          >
+            <strong style={{ color: C.navy }}>{s.name}</strong>
+            <div style={{ fontSize: 12, color: C.red, marginTop: 2 }}>
+              {s.lang}
+            </div>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
+              {s.focus}
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <h2 style={{ fontFamily: serif, color: C.navy, marginTop: 40 }}>
         Bilingual agents & services
       </h2>
       <div

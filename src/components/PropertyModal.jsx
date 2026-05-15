@@ -10,6 +10,133 @@ import {
 import { CONDITIONS } from '../data/listings.js';
 import { nearestShinkansen, cityPopulation } from '../lib/place.js';
 import { displayTitle } from '../lib/format.js';
+import { Link } from 'react-router-dom';
+import { submitLead } from '../lib/leads.js';
+
+// Swap these for your affiliate/referral URLs once you've joined the
+// programs (Wise affiliate, etc.). Plain links until then.
+const WISE_URL = 'https://wise.com/';
+
+function BuyingHelp({ listing }) {
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [st, setSt] = useState({ status: 'idle' });
+
+  async function send(e) {
+    e.preventDefault();
+    if (st.status === 'busy') return;
+    setSt({ status: 'busy' });
+    const r = await submitLead({ email, message, listing });
+    setSt(
+      r.ok
+        ? { status: 'done' }
+        : { status: 'err', msg: r.error }
+    );
+  }
+
+  return (
+    <div
+      style={{
+        background: C.white,
+        border: `2px solid ${C.gold}`,
+        borderRadius: 8,
+        padding: 16,
+        marginTop: 16,
+        fontFamily: sans,
+      }}
+    >
+      <h4 style={{ margin: '0 0 6px', fontFamily: serif, color: C.navy }}>
+        Get help buying this property
+      </h4>
+      <p style={{ margin: '0 0 12px', fontSize: 14, color: C.muted }}>
+        Akiya purchases by overseas buyers are usually cash and handled in
+        Japanese. Tell us you're interested and we'll connect you with a
+        bilingual buyer's agent for this property.
+      </p>
+
+      {st.status === 'done' ? (
+        <div style={{ color: '#2e7d32', fontWeight: 700, fontSize: 14 }}>
+          ✓ Sent. We'll be in touch about this property by email.
+        </div>
+      ) : (
+        <form onSubmit={send} style={{ display: 'grid', gap: 8 }}>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            style={{
+              padding: 10,
+              border: `1px solid ${C.line}`,
+              borderRadius: 6,
+              fontFamily: sans,
+            }}
+          />
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Anything specific? (budget, timeline, questions) — optional"
+            rows={2}
+            style={{
+              padding: 10,
+              border: `1px solid ${C.line}`,
+              borderRadius: 6,
+              fontFamily: sans,
+              resize: 'vertical',
+            }}
+          />
+          <button
+            type="submit"
+            disabled={st.status === 'busy'}
+            style={{
+              background: C.red,
+              color: C.white,
+              border: 'none',
+              padding: '11px 18px',
+              borderRadius: 6,
+              fontWeight: 700,
+              fontFamily: sans,
+              cursor: st.status === 'busy' ? 'default' : 'pointer',
+            }}
+          >
+            {st.status === 'busy' ? 'Sending…' : 'Request help with this house'}
+          </button>
+          {st.status === 'err' && (
+            <div style={{ color: C.red, fontSize: 13 }}>{st.msg}</div>
+          )}
+        </form>
+      )}
+
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 12,
+          borderTop: `1px solid ${C.line}`,
+          fontSize: 13,
+          display: 'flex',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}
+      >
+        <a
+          href={WISE_URL}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: C.red, fontWeight: 700, textDecoration: 'none' }}
+        >
+          💸 Send funds to Japan (Wise) ↗
+        </a>
+        <Link
+          to="/get-started"
+          style={{ color: C.red, fontWeight: 700, textDecoration: 'none' }}
+        >
+          🤝 Bilingual agents & buying guide →
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 // Best Google Maps target: the Japanese street address from the
 // description (Google geocodes it precisely) > the city-level
@@ -590,6 +717,7 @@ export default function PropertyModal({ listing, onClose, asPage = false }) {
             );
           })()}
 
+          <BuyingHelp listing={listing} />
           <TaxCalculator listing={listing} />
           <Advisor listing={listing} />
         </div>
