@@ -10,6 +10,25 @@ import {
 import { CONDITIONS } from '../data/listings.js';
 import { nearestShinkansen, cityPopulation } from '../lib/place.js';
 
+// Best Google Maps target: the Japanese street address from the
+// description (Google geocodes it precisely) > the city-level
+// coordinates > a city/prefecture text search.
+function googleMapsUrl(listing) {
+  const base = 'https://www.google.com/maps/search/?api=1&query=';
+  const desc = listing.description || '';
+  const lead = desc
+    .split(/\s—\s|\.\s|。|Source:/)[0]
+    .replace(/\s+/g, '')
+    .trim();
+  if (/[　-鿿]/.test(lead) && lead.length >= 4) {
+    return base + encodeURIComponent(lead);
+  }
+  if (listing.lat != null && listing.lng != null) {
+    return base + `${listing.lat},${listing.lng}`;
+  }
+  return base + encodeURIComponent(`${listing.city} ${listing.prefecture} Japan`);
+}
+
 function Stat({ label, value, sub }) {
   return (
     <div style={{ flex: '1 1 110px' }}>
@@ -393,6 +412,22 @@ export default function PropertyModal({ listing, onClose, asPage = false }) {
               <div style={{ color: C.muted, fontFamily: sans, marginTop: 4 }}>
                 {listing.city}, {listing.prefecture}
               </div>
+              <a
+                href={googleMapsUrl(listing)}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-block',
+                  marginTop: 6,
+                  fontFamily: sans,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: C.red,
+                  textDecoration: 'none',
+                }}
+              >
+                📍 View on Google Maps ↗
+              </a>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div
