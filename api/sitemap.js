@@ -17,20 +17,36 @@ export default async function handler(req) {
 
   if (sUrl && sKey) {
     try {
-      const r = await fetch(
-        `${sUrl}/rest/v1/listings?select=id&active=eq.true`,
-        { headers: { apikey: sKey, Authorization: `Bearer ${sKey}` } }
-      );
-      const rows = await r.json();
-      for (const row of rows || []) {
-        const i = String(row.id).indexOf(':');
-        if (i < 0) continue;
-        const src = row.id.slice(0, i);
-        const sid = encodeURIComponent(row.id.slice(i + 1));
-        urls.push(`${origin}/listing/${src}/${sid}`);
+      // PostgREST caps each response at 1000 rows — page with Range
+      // so all ~1.5k listings end up in the sitemap.
+      const PAGE = 1000;
+      let from = 0;
+      for (;;) {
+        const r = await fetch(
+          `${sUrl}/rest/v1/listings?select=id&active=eq.true&order=id`,
+          {
+            headers: {
+              apikey: sKey,
+              Authorization: `Bearer ${sKey}`,
+              Range: `${from}-${from + PAGE - 1}`,
+              'Range-Unit': 'items',
+            },
+          }
+        );
+        const rows = await r.json();
+        if (!Array.isArray(rows) || rows.length === 0) break;
+        for (const row of rows) {
+          const i = String(row.id).indexOf(':');
+          if (i < 0) continue;
+          const src = row.id.slice(0, i);
+          const sid = encodeURIComponent(row.id.slice(i + 1));
+          urls.push(`${origin}/listing/${src}/${sid}`);
+        }
+        if (rows.length < PAGE) break;
+        from += PAGE;
       }
     } catch {
-      /* fall back to just the main pages */
+      /* fall back to whatever URLs we have */
     }
   }
 
