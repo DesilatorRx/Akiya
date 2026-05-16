@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { C, serif, sans } from './theme.js';
 import ListingsPage from './components/ListingsPage.jsx';
@@ -6,8 +6,12 @@ import GetStartedPage from './components/GetStartedPage.jsx';
 import DataSourcesPage from './components/DataSourcesPage.jsx';
 import ListingDetail from './components/ListingDetail.jsx';
 
+// Map pulls in Leaflet (~150 kB) — load it only when the route is visited.
+const MapPage = lazy(() => import('./components/MapPage.jsx'));
+
 const TABS = [
   { path: '/', label: 'Listings' },
+  { path: '/map', label: 'Map' },
   { path: '/get-started', label: 'Get Started' },
   { path: '/data-sources', label: 'Data Sources' },
 ];
@@ -111,6 +115,14 @@ export default function App() {
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: 24 }}>
         <Routes>
           <Route path="/" element={<ListingsPage />} />
+          <Route
+            path="/map"
+            element={
+              <Suspense fallback={<p style={{ fontFamily: sans }}>Loading map…</p>}>
+                <MapPage />
+              </Suspense>
+            }
+          />
           <Route path="/get-started" element={<GetStartedPage />} />
           <Route path="/data-sources" element={<DataSourcesPage />} />
           <Route
