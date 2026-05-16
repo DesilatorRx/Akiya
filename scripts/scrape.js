@@ -50,6 +50,33 @@ const ATHOME_SUBS = [
   'susaki-c39206', 'kami-c39212', 'niigata-c15100', 'tajimi-c21204',
   'yuzawa-c05207', 'nakano-c20211', 'yokote-c05203', 'tome-c04212',
   'wakayama-c30201', 'kyoto-c26100', 'takaishi-c27225',
+  // Sweep of all 47 prefectures (2026-05-16) — +97 productive municipal
+  // banks (~+2,000 listings). akiya-athome template handles all of them.
+  'kasaoka-c33205', 'fukui-c18201', 'kitakyushu-c40100', 'takaoka-c16202',
+  'hirosaki-c02202', 'sakai-c18210', 'tsuyama-c33203', 'mihara-c34204',
+  'ebino-c45209', 'miyoshi-c34209', 'mine-c35213', 'kiryu-c10203',
+  'yanai-c35212', 'kasai-c28220', 'kurayoshi-c31203', 'imari-c41205',
+  'miyako-c03202', 'nantan-c26213', 'hachinohe-c02203', 'toyama-c16201',
+  'miyazaki-c45201', 'sanyo-c35216', 'mima-c36207', 'awara-c18208',
+  'iwakuni-c35208', 'taku-c41204', 'kasama-c08216', 'kofu-c19201',
+  'nishiwaki-c28213', 'tsugaru-c02209', 'hadano-c14211', 'miyoshi-c36208',
+  'koka-c25209', 'uda-c29212', 'hirado-c42207', 'goshogawara-c02205',
+  'oyabe-c16209', 'ono-c18205', 'hachimantai-c03214', 'nirasaki-c19207',
+  'tomioka-c10210', 'hyuga-c45206', 'tsu-c24201', 'higashiomi-c25213',
+  'hofu-c35206', 'naruto-c36202', 'toba-c24211', 'kuwana-c24205',
+  'tahara-c23231', 'sasayama-c28221', 'kuji-c03207', 'iga-c24216',
+  'shibukawa-c10208', 'sano-c09204', 'annaka-c10211', 'ogi-c41208',
+  'makinohara-c22226', 'gamagori-c23214', 'iki-c42210', 'midori-c10212',
+  'suzu-c17205', 'matsusaka-c24204', 'ashikaga-c09202', 'nasushiobara-c09213',
+  'moka-c09209', 'odawara-c14206', 'mimasaka-c33215', 'ishioka-c08205',
+  'nikko-c09206', 'takeo-c41206', 'higashimatsuyama-c11212', 'gose-c29208',
+  'inuyama-c23215', 'ushiku-c08219', 'kamisu-c08232', 'chikusei-c08227',
+  'shimotsuke-c09216', 'uozu-c16204', 'tsuru-c19204', 'gojo-c29207',
+  'toyokawa-c23207', 'yonago-c31202', 'sanuki-c37206', 'yoshinogawa-c36205',
+  'tsushima-c42209', 'tatebayashi-c10207', 'abiko-c12222', 'shimoda-c22219',
+  'yokkaichi-c24202', 'kakogawa-c28210', 'morioka-c03201', 'isesaki-c10204',
+  'yaizu-c22212', 'sakaiminato-c31204', 'tottori-c31201', 'matsuura-c42208',
+  'isahaya-c42204',
 ];
 
 function configFromSub(sub) {

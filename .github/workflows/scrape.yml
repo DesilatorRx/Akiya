@@ -22,7 +22,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50 # ~146 banks; geocode/population are rate-limited
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +30,19 @@ jobs:
         with:
           node-version: 22 # 20 lacks native WebSocket (supabase-js realtime)
           cache: npm
+
+      # Persist the geocode (Nominatim) + population (Wikidata) caches
+      # across runs so we only look up NEW municipalities, not all ~146
+      # every night — respects both services' rate/bulk policies.
+      - name: Restore geo/population caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            scripts/.geocache.json
+            scripts/.popcache.json
+          key: akiya-place-cache-${{ github.run_id }}
+          restore-keys: |
+            akiya-place-cache-
 
       - run: npm ci
 
